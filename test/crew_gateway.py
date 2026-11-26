@@ -4,13 +4,13 @@ import os
 from pathlib import Path
 import socket
 import subprocess
+import sys
 import time
 
 from kiro_crew.apps.manifest import AppManifest
 from kiro_crew.testing.harness import spawn_feature_gateway
 
 ROOT = Path(__file__).resolve().parents[1]
-NAME = "moonspool-rehearsal"
 
 
 def check(gateway):
@@ -30,15 +30,23 @@ if __name__ == "__main__":
     print("Official manifest validation passed.", flush=True)
     with spawn_feature_gateway(fixture="minimal", approval="interactive", crons=False, timeout=135) as session:
         print("Official dashboard listening on loopback.", flush=True)
-        check(session)
-        handle = session
-    # On Windows the upstream harness can time out waiting for taskkill even
-    # when the process exits moments later. Verify its process and socket.
-    handle.proc.wait(timeout=30)
+        try:
+            check(session)
+        finally:
+            # Ask this profile's own gateway to exit before the Windows test
+            # harness falls back to timing out on taskkill's process-tree scan.
+            env = dict(os.environ, KIROCREW_HOME=str(session.home), KIRO_HOME=str(session.home / "kiro"))
+            subprocess.run([
+                sys.executable, "-c",
+                "from kiro_crew.cli_server_stop import _request_gateway_shutdown as stop; "
+                "import sys; sys.exit(0 if stop(int(sys.argv[1])) else 1)",
+                str(session.port),
+            ], env=env, check=True, timeout=30)
+            session.proc.wait(timeout=65)
     for attempt in range(30):
         with socket.socket() as sock:
             sock.settimeout(0.25)
-            if sock.connect_ex(("127.0.0.1", handle.port)) != 0:
+            if sock.connect_ex(("127.0.0.1", session.port)) != 0:
                 break
         time.sleep(0.25)
     else:
