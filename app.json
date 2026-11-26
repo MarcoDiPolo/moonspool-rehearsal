@@ -1,0 +1,13 @@
+{
+  "name": "moonspool-rehearsal",
+  "version": "1.0.0",
+  "displayName": "Moonspool Rehearsal",
+  "description": "Loop a difficult passage from a Moonspool Cabinet roll with a count-in, practice tempo and pitch cues.",
+  "author": "MarcoDiPolo",
+  "tags": ["music", "practice"],
+  "ui": {
+    "entry": "crew.mjs",
+    "pages": [{"route": "/apps/moonspool-rehearsal", "label": "Rehearsal", "icon": "Music"}],
+    "sidebar": {"section": "Apps"}
+  }
+}
